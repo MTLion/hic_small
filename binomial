@@ -1,0 +1,48 @@
+class Binomial:
+    def __init__(self, n, k, values=None):
+        self.n = float(n)  # number of clicks
+        self.k = float(k)  # number of conversions
+        self.cvr = [i/200.0 for i in range(1, 200)]  # list CVR values
+        #self.cvr = [i/100.0 for i in range(0, 101)]
+        self.coef = (math.factorial(self.n))/(math.factorial(self.k)*math.factorial(self.n-self.k))  # helper coef
+        ## !!!!!Add error handling when coef is too big due to use of factorials!!!!!
+        self.prob = [(e**self.k)*((1-e)**(self.n-self.k))*self.coef
+                     for e in self.cvr]  # list of probabilities of CVR
+        self.prob_sum = sum(self.prob)
+        self.normalized = [x/self.prob_sum for x in self.prob]
+        if values is None:
+            self.values = {}  # dict of {cvr: probability of this cvr}
+        for i in range(len(self.cvr)):
+            self.values[self.cvr[i]] = self.normalized[i]
+
+    def plot(self):
+        """
+        Method, that plots probability of the given CVR, based on the number of clicks and conversions given
+        :return: plot
+        """
+        plt.plot(self.cvr, self.normalized)
+
+    def summary(self, alpha=0.95):
+        temp_values = {}
+        temp_values.update(self.values)
+        result = 0
+        interval = []
+        while result <= alpha:
+            key = max(temp_values, key=temp_values.get)
+            result += temp_values[key]
+            interval.append(key)
+            del temp_values[key]
+        return result, interval
+
+    def predict(self, alpha=0.95):
+        predict, ci = self.summary(alpha)
+        ci.sort()
+        print 'CVR lies between '+str(ci[0]*100)+'% and '+str(ci[-1]*100)+'% with probability '+str(predict)
+        return (ci[0]+ci[-1])/2
+
+    def predict2(self, alpha=0.95):
+        p_hat = self.k/self.n
+        left = p_hat-norm.ppf(0.5+alpha/2)*math.sqrt(p_hat*(1-p_hat)/self.n)
+        right = p_hat+norm.ppf(0.5+alpha/2)*math.sqrt(p_hat*(1-p_hat)/self.n)
+        print 'CVR lies between '+str(left*100)+'% and '+str(right*100)+'% with probability '+str(alpha)
+        return p_hat
